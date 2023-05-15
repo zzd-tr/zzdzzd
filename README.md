@@ -1,2 +1,306 @@
 # zzdzzd
 1111
+
+
+Option Explicit
+
+Public WB0 As Workbook, ObjWS_Config As Object, ObjWS_Data As Object
+Public Const MAXSTARNUMBER As Integer = 5
+Public ObjCell_SearchPath As Object
+Public If_Batch$, ChartName$, XaxisName$, YaxisName$, sParaX$, sParaY$, myChart As Chart
+
+'== Function: List all required files under the searchPath
+Public Function FilePath(sPath() As String, sTmpPath$, iCurrent%, iStarNum%, ObjCell_SearchPath)
+    Dim sDir$, sFiles(100) As String, iFilesIndex%
+    iFilesIndex = 0
+    sDir = Left(sTmpPath, InStrRev(sTmpPath, "\"))
+    If iCurrent <= iStarNum Then
+        sFiles(0) = FileSystem.Dir(sTmpPath, vbDirectory)
+        Do While sFiles(iFilesIndex) <> ""
+            Do While sFiles(iFilesIndex) = "." Or sFiles(iFilesIndex) = ".."
+                sFiles(iFilesIndex) = FileSystem.Dir()
+            Loop
+            iFilesIndex = iFilesIndex + 1
+            sFiles(iFilesIndex) = FileSystem.Dir()
+        Loop
+        iFilesIndex = iFilesIndex - 1
+        Dim iDocIndex%
+        For iDocIndex% = 0 To iFilesIndex
+            If (GetAttr(sDir & sFiles(iDocIndex)) And vbDirectory) = vbDirectory Then
+                Call FilePath(sPath, sDir & sFiles(iDocIndex) & "" & sPath(iCurrent + 1), iCurrent + 1, iStarNum, ObjCell_SearchPath)
+            Else
+                If iCurrent = iStarNum Then
+                    Dim iRow%
+                    iRow% = 1
+                    Do While ObjCell_SearchPath.Offset(iRow).Value <> ""
+                        iRow = iRow + 1
+                    Loop
+                    ObjCell_SearchPath.Offset(iRow).Value = sDir & sFiles(iDocIndex)
+                End If
+            End If
+        Next iDocIndex
+    End If
+End Function
+'== Function: Open and copy all worksheets to the current excel.
+Public Function GetWorkSheet(sFilePath As String, sRename As String)
+    Dim sFileName$, ObjWS_Index As Object
+    sFileName = Mid(sFilePath, InStrRev(sFilePath, "\") + 1)
+    'If sRename = "" Then sRename = Mid(sFileName, 1, InStr(sFileName, ".") - 1)
+    Workbooks.OpenText Filename:=sFilePath, StartRow:=1, DataType:=xlDelimited, TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=True, Tab:=True, Semicolon:=False, Comma:=True, Space:=False, Other:=False
+    Dim iSheetIndex%
+    For iSheetIndex = 1 To Workbooks(sFileName).Worksheets.Count
+        Set ObjWS_Index = Workbooks(sFileName).Worksheets(iSheetIndex)
+        If sRename <> "" Then ObjWS_Index.Name = sRename & Space(1) & CStr(iSheetIndex)
+        ObjWS_Index.Copy after:=WB0.Worksheets(WB0.Worksheets.Count)
+    Next iSheetIndex
+    Workbooks(sFileName).Close savechanges:=False
+End Function
+'== Function: Check one sheet if exists
+Public Function CheckSheet(sWSName As String) As Boolean
+    Dim IsExist As Boolean, iTmpSheet%
+    IsExist = False
+    For iTmpSheet = 1 To Application.ActiveWorkbook.Sheets.Count
+        If Application.ActiveWorkbook.Sheets(iTmpSheet).Name = sWSName Then
+            IsExist = True
+            Exit For
+        End If
+    Next
+    CheckSheet = IsExist
+End Function
+'== Function: Extract data
+Public Function DataArray(ByVal ObjWS_Data As Object, sPara$) As Variant
+    Dim LastCol%, LastRow%, iCount%, iLoopTime%, TmpArray() As Variant, TmpCell As Range
+    ReDim TmpArray(1)
+    LastCol = 1 + ObjWS_Data.Cells(1, ObjWS_Data.Columns.Count).End(xlToLeft).Column
+    If LastCol > 20 Then MsgBox ("Too many columns."): End
+    ' DEBUG: To avoid too many columns
+    Dim ObjSearchRange As Object
+    Set ObjSearchRange = ObjWS_Data.Cells.Find(What:=sPara, SearchOrder:=xlByRows, LookAt:=xlWhole, MatchCase:=True)
+    If ObjSearchRange Is Nothing Then: End
+    ' DEBUG: No sPara Found
+    iLoopTime = 0
+	FindData:
+    If iLoopTime = 10 Then MsgBox ("Cannot find the index."): End
+    For Each TmpCell In ObjWS_Data.Cells(ObjSearchRange.Row, 1).Resize(, LastCol)
+        If Trim(TmpCell.Value) = sPara And IsNumeric(TmpCell.Offset(1).Text) And IsNumeric(TmpCell.Offset(2).Text) Then
+            LastRow = TmpCell.End(xlDown).Row
+            ReDim Preserve TmpArray(0 To LastRow)
+            For iCount = 0 To LastRow
+                TmpArray(iCount) = TmpCell.Offset(iCount + 1).Value
+            Next iCount
+            DataArray = TmpArray
+            Exit Function
+        End If
+    Next TmpCell
+    iLoopTime = iLoopTime + 1
+    Set ObjSearchRange = ObjWS_Data.Cells.FindNext(ObjSearchRange)
+    GoTo FindData
+End Function
+'== Function: Chart default setting
+Public Function ChartSet(myChart As Chart, ChartName$, XaxisName$, YaxisName$)
+    With myChart
+        .HasTitle = True
+        .ChartTitle.Text = ChartName
+        .ChartType = xlXYScatterLines
+        .PlotArea.Border.LineStyle = xlSolid
+        .PlotArea.Border.Weight = 3
+        .PlotArea.Border.ColorIndex = 1
+        With .Axes(xlCategory)
+            .HasTitle = True
+            .AxisTitle.Text = XaxisName
+            .Crosses = xlMinimum
+            .MajorTickMark = xlInside
+            .HasMajorGridlines = True
+            .MajorGridlines.Border.LineStyle = xlDash
+            .MajorGridlines.Border.ColorIndex = 15
+            .Format.Line.Visible = msoFalse
+        End With
+        With .Axes(xlValue)
+            .HasTitle = True
+            .AxisTitle.Text = YaxisName
+            .Crosses = xlMinimum
+            .MajorTickMark = xlInside
+            .HasMajorGridlines = True
+            .MajorGridlines.Border.LineStyle = xlDash
+            .MajorGridlines.Border.ColorIndex = 15
+            .Format.Line.Visible = msoFalse
+        End With
+    End With
+End Function
+
+Sub InitGlobals()
+    Set WB0 = ActiveWorkbook
+    Set ObjWS_Config = ActiveWorkbook.Worksheets("Overall")
+	Set ObjCell_SearchPath = ObjWS_Config.Cells(2, 5) ' Fixed result outputs to the first row under the searching path
+	'GetWorkSheet(Trim(TmpCell), Trim(TmpCell.Offset(, 1))) Sheet name
+	If_Batch = CStr(Trim(ObjWS_Config.Cells(8, 2)))
+	If If_Batch = "" Then If_Batch = 0
+	ChartName = CStr(Trim(ObjWS_Config.Cells(10, 2)))
+	If ChartName = "" Then ChartName = "AutoGen"
+	XaxisName = CStr(Trim(ObjWS_Config.Cells(2, 3)))
+	If XaxisName = "" Then XaxisName = "X"
+	YaxisName = CStr(Trim(ObjWS_Config.Cells(3, 3)))
+	If YaxisName = "" Then YaxisName = "Y"
+	sParaX = CStr(Trim(ObjWS_Config.Cells(2, 2)))
+	If sParaX = "" Then sParaX = "Vd"
+	sParaY = CStr(Trim(ObjWS_Config.Cells(3, 2)))
+	If sParaY = "" Then sParaY = "Id"
+End Sub
+
+Sub ListFile()
+    Call InitGlobals
+    Dim iStarNum%, sSearchPath$, sSplitPath(MAXSTARNUMBER) As String
+    sSearchPath = ObjCell_SearchPath.Value
+    If Trim(sSearchPath) = "" Then Exit Sub
+    ' DEBUG: Found no path
+    ObjCell_SearchPath.Offset(1).Resize(100).ClearContents ' Initial
+    ' DEBUG: max 100 searching results. need an update for append or not
+    Dim iStarPos%, iBackSlashPos% ' STAR* searching loop
+    For iStarNum = 0 To MAXSTARNUMBER
+        iStarPos = InStr(sSearchPath, "*")
+        If iStarPos > 0 Then
+            iBackSlashPos = InStr(iStarPos, sSearchPath, "\")
+            If iBackSlashPos > 0 Then
+                sSplitPath(iStarNum) = Left(sSearchPath, iBackSlashPos - 1)
+                sSearchPath = Mid(sSearchPath, iBackSlashPos + 1)
+            Else
+                sSplitPath(iStarNum) = sSearchPath
+                Exit For
+            End If
+        Else
+            sSplitPath(iStarNum) = sSearchPath
+        End If
+    Next iStarNum
+    Call FilePath(sSplitPath, sSplitPath(0), 0, iStarNum, ObjCell_SearchPath)
+End Sub
+
+Sub OpenFile()
+    Call InitGlobals
+    Dim TmpCell As Range
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    For Each TmpCell In ObjCell_SearchPath.Offset(1).Resize(100)
+    If Trim(TmpCell) <> "" Then Call GetWorkSheet(Trim(TmpCell), Trim(TmpCell.Offset(, 1)))
+    Next TmpCell
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+
+Sub ChartGen()
+    Call InitGlobals
+    Dim iSheetNum%
+    'If ObjWS_Config.ChartObjects.Count > 0 Then ObjWS_Config.ChartObjects.Delete ' Clear the chart
+    Dim ArrayX As Variant, ArrayY As Variant
+    Select Case If_Batch
+    Case "All sheets in one chart"
+        Set myChart = ObjWS_Config.Shapes.AddChart2(XlChartType:=xlXYScatterLines, Left:=800, Top:=10, Width:=500, Height:=300).Chart
+        Call ChartSet(myChart, ChartName, XaxisName, YaxisName)
+        If WB0.Worksheets.Count < 2 Then End
+        ' DEBUG: Found no sheet
+        For iSheetNum = 2 To WB0.Worksheets.Count
+            Set ObjWS_Data = WB0.Worksheets(iSheetNum)
+            ArrayX = DataArray(ObjWS_Data, sParaX)
+            ArrayY = DataArray(ObjWS_Data, sParaY)
+            myChart.SeriesCollection.NewSeries.XValues = ArrayX
+            myChart.SeriesCollection.NewSeries.Values = ArrayY
+            myChart.SeriesCollection.NewSeries.Name = ObjWS_Data.Name
+        Next iSheetNum
+        '.ChartArea.ClearContents
+    Case "All sheet with single chart"
+        If ObjWS_Config.ChartObjects.Count > 0 Then ObjWS_Config.ChartObjects.Delete
+        Dim Loc_left%, Loc_top%
+        Loc_left = 800
+        Loc_top = 10
+        For iSheetNum = 2 To WB0.Worksheets.Count
+            Set myChart = ObjWS_Config.Shapes.AddChart2(XlChartType:=xlXYScatterLines, Left:=Loc_left, Top:=Loc_top, Width:=500, Height:=300).Chart
+            Call ChartSet(myChart, ChartName, XaxisName, YaxisName)
+            Set ObjWS_Data = WB0.Worksheets(iSheetNum)
+            ArrayX = DataArray(ObjWS_Data, sParaX)
+            ArrayY = DataArray(ObjWS_Data, sParaY)
+            myChart.SeriesCollection.NewSeries.XValues = ArrayX
+            myChart.SeriesCollection.NewSeries.Values = ArrayY
+            myChart.SeriesCollection.NewSeries.Name = ObjWS_Data.Name
+            If (iSheetNum - 1) Mod 3 = 0 Then
+                Loc_left = 800: Loc_top = Loc_top + 300
+            Else
+                Loc_left = Loc_left + 500
+            End If
+        Next iSheetNum
+    Case "Single sheet single chart"
+        Set myChart = ObjWS_Config.Shapes.AddChart2(XlChartType:=xlXYScatterLines, Left:=800, Top:=10, Width:=500, Height:=300).Chart
+        Call ChartSet(myChart, ChartName, XaxisName, YaxisName)
+        Dim SingeSheet$
+        SingeSheet = InputBox("Input the sheet name", "SheetName:", "SheetName")
+        Set ObjWS_Data = WB0.Worksheets(SingeSheet)
+        ArrayX = DataArray(ObjWS_Data, sParaX)
+        ArrayY = DataArray(ObjWS_Data, sParaY)
+        myChart.SeriesCollection.NewSeries.XValues = ArrayX
+        myChart.SeriesCollection.NewSeries.Values = ArrayY
+        myChart.SeriesCollection.NewSeries.Name = ObjWS_Data.Name
+    Case Else
+        MsgBox ("Need choose one gen type")
+    End Select
+End Sub
+
+Sub StoreAsNew()
+    Call InitGlobals
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Dim WBNew As Workbook
+    Dim sDir As String, sTmpPath As String, sWBNewFile$, sWBName$
+    sTmpPath = Left((Trim(ObjCell_SearchPath)), InStrRev(Trim(ObjCell_SearchPath), "\"))
+    sWBName = InputBox("ReName the Workbook as", "Save As:", "Result")
+    sWBNewFile = sTmpPath & CStr(sWBName) & ".xlsm"
+    If Dir(sTmpPath & CStr(sWBName) & ".xlsx") = "" Then
+        WB0.SaveCopyAs Filename:=sWBNewFile
+        Set WBNew = Workbooks.Open(sWBNewFile)
+        'WBNew.Sheets(1).Columns("A:L").Delete Shift:=xlToLeft
+        WBNew.SaveAs Left(sWBNewFile, Len(sWBNewFile) - 1) & "x", 51
+        WBNew.Close False
+        Kill sWBNewFile
+    Else
+        MsgBox ("File already exists.")
+    End If
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+
+Sub SaveAsPPT()
+    Call InitGlobals
+    'For Each Shape in ObjWS_Config
+    'Set myChart = ObjWS_Config.Shapes.AutoShapeType
+    'myChart.Copy
+    
+    Dim PPTApp As PowerPoint.Application
+    Dim PPTPres As PowerPoint.Presentations
+    Dim PPTSld As PowerPoint.Slide
+    
+    Dim Cht As ChartObject
+    Set PPTApp = New PowerPoint.Application
+        PPTApp.Visible = True
+        
+    Set PPTPres = PPTApp.Presentations.Add
+    Set PPTSld = PPTPres.Slides.Add(1, 12)
+    'Create a ref to the chart we export
+    For Each Cht In ObjWS_Config.ChartObjects
+    'Set Cht = ObjWS_Config.ChartObjects(1)
+    Cht.Copy
+    ObjPPTSld.Shapes.Paste
+    
+    
+End Sub
+    
+    
+Sub SaveAsPPT2()
+    
+    
+    'XXX
+    Dim ObjPPT As Object, ObjPPTSld As Object
+    Set ObjPPT = CreateObject("PowerPoint.Application").Presentations.Add
+    Set ObjPPTSld = ObjPPT.Slides.Add(1, 12)
+    'ObjPPTSld.Shapes.Paste
+End Sub
+
+'Y2, filter, save as ppt, chart setting,
+'FullSeriesCollection(3).AxisGroup = 2
+
