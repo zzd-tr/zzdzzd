@@ -33,3 +33,44 @@ endlocal
 )
 )
 exit
+
+Sub ChartGenByColor()
+Call InitGlobals
+Dim iSheetNum%, ChartName$, sNameX$, sNameY$, sNameY2$, sParaX$, sParaY$, sParaY2$, sFilter$, myChart As Chart
+Dim Color(10) As Variant, iCnt%, iGroup%, iLeft%, iTop%: iLeft = SET_CHTL: iTop = SET_CHTT
+If ObjWS_Config.ChartObjects.Count > 0 Then ObjWS_Config.ChartObjects.Delete
+For Each TmpCell In ObjCell_Name
+    If Trim(TmpCell) <> "" And TmpCell.Interior.Pattern <> xlNone And Not IsInArray(TmpCell.Interior.Color, Color()) Then: Color(iCnt) = TmpCell.Interior.Color: iCnt = iCnt + 1
+    If iCnt > 10 Then End
+Next TmpCell
+For iGroup = 0 To iCnt - 1
+    ChartName = ""
+    Set myChart = ObjWS_Config.ChartObjects.Add(Left:=iLeft, Top:=iTop, Width:=SET_CHTW, Height:=SET_CHTH).Chart
+    For Each TmpCell In ObjCell_Name
+    	If TmpCell.Interior.Color = Color(iGroup) And CheckSheet(CStr(TmpCell.Value)) Then
+		If ChartName = "" Then ChartName = Trim(TmpCell)
+                sParaX = Trim(TmpCell.Offset(, SET_XCOL - SET_INTCOL)): sNameX = Trim(TmpCell.Offset(, SET_XNCOL - SET_INTCOL))	
+                sParaY = Trim(TmpCell.Offset(, SET_YCOL - SET_INTCOL)): sNameY = Trim(TmpCell.Offset(, SET_YNCOL - SET_INTCOL))
+                sFilter = Trim(TmpCell.Offset(, SET_FCOL - SET_INTCOL))
+		Call Data2Chart(myChart, WB0.Worksheets(TmpCell.Value), sFilter, sParaX, sParaY)
+                Call ChartProperty(myChart, ChartName, sNameX, sNameY)
+            End If
+    Next TmpCell
+If (ObjWS_Config.ChartObjects.Count) Mod 3 = 0 Then
+    iLeft = SET_CHTL: iTop = iTop + SET_CHTH
+Else
+    iLeft = iLeft + SET_CHTW
+End If
+Next iGroup
+End Sub
+
+Public Function IsInArray(FoundString As String, arr As Variant) As Boolean
+    Dim i%
+    For i = LBound(arr) To UBound(arr)
+        If arr(i) = FoundString Then
+            IsInArray = True
+            Exit Function
+        End If
+    Next i
+    IsInArray = False
+End Function
