@@ -15,3 +15,21 @@ Sub LoadPPT()
       If iCnt = 9 Then iCnt = 0: iSld = iSld + 1
   Next chtObj
 End Sub
+
+@echo off
+set /p str1= As is:
+set /p str2= To be:
+echo.
+echo ……
+for /f "delims=" %%a in ('dir /s /b ^|sort /+65535') do (
+if "%%~nxa" neq "%~nx0" (
+set "file=%%a"
+set "name=%%~na"
+set "extension=%%~xa"
+call set "name=%%name:%str1%=%str2%%%"
+setlocal enabledelayedexpansion
+ren "!file!" "!name!!extension!" 2>nul
+endlocal
+)
+)
+exit
