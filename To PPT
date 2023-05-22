@@ -1,0 +1,17 @@
+Sub LoadPPT()
+    Call InitGlobals
+    Dim iCnt%, iSld%, Shp As Object, chtObj As Object, ObjPPT As Object, ObjPPTSld As Object
+    Set ObjPPT = CreateObject("PowerPoint.Application").Presentations.Add
+	iSld = 1
+  For Each chtObj In WB0.Worksheets(ObjWS_Config_Name).ChartObjects
+      If iCnt = 0 Then Set ObjPPTSld = ObjPPT.Slides.Add(iSld, 12)
+      iCnt = iCnt + 1
+      chtObj.CopyPicture
+      Set Shp = ObjPPTSld.Shapes.Paste
+      Shp.Width = 320
+      Shp.Height = 180
+      Shp.Left = 120 + ((iCnt - 1) Mod 3) * Shp.Width
+      Shp.Top = 0 + Int((iCnt - 1) / 3) * Shp.Height
+      If iCnt = 9 Then iCnt = 0: iSld = iSld + 1
+  Next chtObj
+End Sub
