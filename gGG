@@ -5,3 +5,16 @@ Ioff: Vg=0V, sensing Id@Vd=1.1*Vdd (pA)
 Idsat: Vd=Vdd, sensing Id@Vg=5V (uA/um)
 Idlin: Vd=0.1V, sensing Id@Vg=5V (uA/um)
 Ida: Vd=Vdd/2V sensing Id @Vg=Vtgm + 0.2 (uA/um)
+
+Sub ListCurve()
+	Call InitGlobals
+	Dim srs As Series, chartset As ChartObject, iCurve%
+	iCurve = 1
+	    For Each chartset In ObjWS_Config.ChartObjects
+            For Each srs In chartset.Chart.SeriesCollection
+                ObjCell_SearchPath.Offset(iCurve) = srs.Name
+				ObjCell_SearchPath.Offset(iCurve, SET_INTCOL - SET_PATHCOL) = chartset.Chart.ChartTitle.Text
+				iCurve = iCurve + 1
+            Next srs
+    Next chartset
+End Sub
