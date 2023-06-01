@@ -7,14 +7,18 @@ Idlin: Vd=0.1V, sensing Id@Vg=5V (uA/um)
 Ida: Vd=Vdd/2V sensing Id @Vg=Vtgm + 0.2 (uA/um)
 
 Sub ListCurve()
-	Call InitGlobals
-	Dim srs As Series, chartset As ChartObject, iCurve%
-	iCurve = 1
-	    For Each chartset In ObjWS_Config.ChartObjects
+    Call InitGlobals
+    Dim srs As Series, chartset As ChartObject, iCurve%
+    iCurve = 1
+        For Each chartset In ObjWS_Config.ChartObjects
             For Each srs In chartset.Chart.SeriesCollection
                 ObjCell_SearchPath.Offset(iCurve) = srs.Name
-				ObjCell_SearchPath.Offset(iCurve, SET_INTCOL - SET_PATHCOL) = chartset.Chart.ChartTitle.Text
-				iCurve = iCurve + 1
+                ObjCell_SearchPath.Offset(iCurve, SET_INTCOL - SET_PATHCOL) = chartset.Chart.ChartTitle.Text
+                chartset.Chart.Axes(xlCategory, xlPrimary).HasTitle = True
+                chartset.Chart.Axes(xlValue, xlPrimary).HasTitle = True
+                ObjCell_SearchPath.Offset(iCurve, SET_XCOL - SET_PATHCOL) = chartset.Chart.Axes(xlCategory, xlPrimary).AxisTitle.Caption
+                ObjCell_SearchPath.Offset(iCurve, SET_YCOL - SET_PATHCOL) = chartset.Chart.Axes(xlValue, xlPrimary).AxisTitle.Caption
+                iCurve = iCurve + 1
             Next srs
     Next chartset
 End Sub
