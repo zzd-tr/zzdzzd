@@ -1,0 +1,7 @@
+Vtgm: Vd=0.1V, extracted from Vg@Gmmax (V)
+Vtlin: Vd=0.1V, search Vg when Id=1.0e-7*(W/L) (V)
+Vtsat: Vd=Vdd, search Vg when Id=1.0e-7*(W/L) (V)
+Ioff: Vg=0V, sensing Id@Vd=1.1*Vdd (pA)
+Idsat: Vd=Vdd, sensing Id@Vg=5V (uA/um)
+Idlin: Vd=0.1V, sensing Id@Vg=5V (uA/um)
+Ida: Vd=Vdd/2V sensing Id @Vg=Vtgm + 0.2 (uA/um)
