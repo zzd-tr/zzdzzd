@@ -545,6 +545,22 @@ For Each TmpCell In WB0.Worksheets(ObjWS_Config_Name).Cells(1, 12).Resize(, 9)
             .Fill.ForeColor.RGB = RGB(222, 222, 222)
         End With
     Next TmpCell
-    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).TextFrame2.TextRange.Text = "Test"
-    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).OnAction = "InitGlobals"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).TextFrame2.TextRange.Text = "1"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).OnAction = "ListFile"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(2).TextFrame2.TextRange.Text = "2"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(2).OnAction = "SimpName"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(3).TextFrame2.TextRange.Text = "3"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(3).OnAction = "ExtractSheet"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(4).TextFrame2.TextRange.Text = "4"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(4).OnAction = "ChartGen"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(5).TextFrame2.TextRange.Text = "5"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(5).OnAction = "RenderColor"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(6).TextFrame2.TextRange.Text = "6"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(6).OnAction = "ColorIndex"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(7).TextFrame2.TextRange.Text = "7"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(7).OnAction = "Export"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(8).TextFrame2.TextRange.Text = "8"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(8).OnAction = "LoadPPT"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(9).TextFrame2.TextRange.Text = "9"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(9).OnAction = "Reset"
 End Sub
