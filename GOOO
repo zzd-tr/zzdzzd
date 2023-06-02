@@ -435,6 +435,10 @@ Sub Export()
     If Dir(sTmpPath & CStr(sWBName) & ".xlsx") = "" Then
         WB0.SaveCopyAs Filename:=sWBNewFile
         Set WBNew = Workbooks.Open(Filename:=sWBNewFile)
+	Dim Shp As Shape
+        For Each Shp In WBNew.Worksheets(ObjWS_Config_Name).Shapes
+            If Shp.Type = msoShapeRectangle Then Shp.Delete
+        Next
         WBNew.Worksheets(ObjWS_Config_Name).Columns(1).Resize(, SET_PATHCOL).Delete Shift:=xlToLeft ' Delete config page
         ActiveWindow.Zoom = 70
         WBNew.SaveAs Left(sWBNewFile, Len(sWBNewFile) - 1) & "x", 51
