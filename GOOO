@@ -528,4 +528,19 @@ Sub SetPage()
         .Interior.ColorIndex = 15
         .HorizontalAlignment = xlLeft
     End With
+For Each TmpCell In WB0.Worksheets(ObjWS_Config_Name).Cells(1, 12).Resize(, 9)
+        Set Shp = WB0.Worksheets(ObjWS_Config_Name).Shapes.AddShape(msoShapeRectangle, TmpCell.Left, TmpCell.Top, TmpCell.Width, TmpCell.Height)
+        With Shp
+            .TextFrame2.TextRange.Text = "Click"
+            .TextFrame2.TextRange.Font.Name = "Calibri"
+            .TextFrame2.TextRange.Font.Size = 11
+            .TextFrame2.TextRange.Font.Italic = True
+            .TextFrame2.TextRange.Font.Fill.ForeColor.RGB = RGB(77, 77, 77)
+            .TextFrame.HorizontalAlignment = xlHAlignCenter
+            .TextFrame.VerticalAlignment = xlVAlignCenter
+            .Fill.ForeColor.RGB = RGB(222, 222, 222)
+        End With
+    Next TmpCell
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).TextFrame2.TextRange.Text = "Test"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).OnAction = "InitGlobals"
 End Sub
