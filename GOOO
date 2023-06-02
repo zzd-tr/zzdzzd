@@ -347,7 +347,7 @@ Public Function Data2Chart(myChart As Chart, ByVal Datasheet As Object, sFilter$
                 With myChart.SeriesCollection.NewSeries
                     .MarkerSize = 3
                     .MarkerBackgroundColorIndex = xlColorIndexNone
-                    .MarkerForegroundColorIndex = xlColorIndexNone
+                    '.MarkerForegroundColorIndex = xlColorIndexNone
                     .XValues = DataArray(DataRange(Datasheet, sParaX).Offset(iCnt * iInterval).Resize(iInterval))
                     .Values = DataArray(DataRange(Datasheet, sParaY).Offset(iCnt * iInterval).Resize(iInterval))
                     .Name = Datasheet.Name & " " & sFilter & " = " & DataCell.Value
