@@ -169,7 +169,7 @@ Sub ExtractSheet()
         End If
     Next TmpCell
     '===================Delete Name with no sheet corresponding
-    WB0.ObjWS_Config.Select
+    ObjWS_Config.Select
     For Each TmpCell In ObjCell_Result
         TmpCell.ClearContents
     Next TmpCell
