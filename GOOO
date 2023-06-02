@@ -529,6 +529,9 @@ Sub SetPage()
         .HorizontalAlignment = xlLeft
     End With
     Dim Shp As Shape
+            For Each Shp In WBNew.Worksheets(ObjWS_Config_Name).Shapes
+            If Shp.Type = msoShapeRectangle Then Shp.Delete
+        Next
 For Each TmpCell In WB0.Worksheets(ObjWS_Config_Name).Cells(1, 12).Resize(, 9)
         Set Shp = WB0.Worksheets(ObjWS_Config_Name).Shapes.AddShape(msoShapeRectangle, TmpCell.Left, TmpCell.Top, TmpCell.Width, TmpCell.Height)
         With Shp
