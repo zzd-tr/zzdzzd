@@ -1,0 +1,573 @@
+Option Explicit
+Public WB0 As Workbook, TmpCell As Range, TmpSheet As Worksheet
+Public ObjWS_Config As Object, ObjCell_SearchPath As Object, ObjCell_Result As Object, ObjCell_Name As Object
+Public Const ObjWS_Config_Name As String = "CONFIG"
+Public Const MAXNUM_STARMARK As Integer = 5
+Public Const MAXNUM_FILEFIND As Integer = 100
+Public Const MAXNUM_CURVESERIES As Integer = 50
+Public Const MAXNUM_DATAFINDTIME As Integer = 15
+
+Public Const SET_CHTW As Integer = 400
+Public Const SET_CHTH As Integer = 300
+Public Const SET_CHTC As Integer = 3
+Public Const SET_CHTL As Integer = 500
+Public Const SET_CHTT As Integer = 15
+
+
+Public Const SET_INTROW As Integer = 1
+Public Const SET_INTCOL As Integer = 2
+Public Const SET_BTTCOL As Integer = 1
+Public Const SET_YCOL As Integer = SET_INTCOL + 1: Public Const SET_XCOL As Integer = SET_INTCOL + 2
+Public Const SET_NCOL As Integer = SET_INTCOL + 3: Public Const SET_PATHCOL As Integer = SET_INTCOL + 4
+
+Sub InitGlobals()
+    Set WB0 = ActiveWorkbook
+    Set ObjWS_Config = ActiveWorkbook.Worksheets(ObjWS_Config_Name)
+    Set ObjCell_SearchPath = ObjWS_Config.Cells(SET_INTROW, SET_PATHCOL)
+    Set ObjCell_Result = ObjCell_SearchPath.Offset(1).Resize(MAXNUM_FILEFIND)
+    Set ObjCell_Name = ObjCell_Result.Offset(, SET_NCOL - SET_PATHCOL)
+End Sub
+'=============================Group1 Ribbon 1'=============================%
+Sub ListFile()
+    Call InitGlobals
+    Dim iStarNum%, sSearchPath$, sSplitPath(MAXNUM_STARMARK) As String
+    sSearchPath = ObjCell_SearchPath.Value
+    'ObjCell_Name.ClearContents
+    ObjCell_Result.ClearContents ' Initial
+    If Trim(sSearchPath) = "" Then Exit Sub
+    Dim iStarPos%, iBackSlashPos% ' STAR* searching loop
+    For iStarNum = 0 To MAXNUM_STARMARK
+        iStarPos = InStr(sSearchPath, "*")
+        If iStarPos > 0 Then
+            iBackSlashPos = InStr(iStarPos, sSearchPath, "\")
+            If iBackSlashPos > 0 Then
+                sSplitPath(iStarNum) = Left(sSearchPath, iBackSlashPos - 1)
+                sSearchPath = Mid(sSearchPath, iBackSlashPos + 1)
+            Else
+                sSplitPath(iStarNum) = sSearchPath
+                Exit For
+            End If
+        Else
+            sSplitPath(iStarNum) = sSearchPath
+        End If
+    Next iStarNum
+    Call FilePath(sSplitPath, sSplitPath(0), 0, iStarNum, ObjCell_SearchPath)
+    ObjCell_Result.Font.ColorIndex = xlAutomatic
+End Sub
+Public Function FilePath(sPath() As String, sTmpPath$, iCurrent%, iStarNum%, ObjCell_SearchPath)
+    Dim sDir$, sFiles(MAXNUM_FILEFIND) As String, iFilesIndex%
+    iFilesIndex = 0
+    sDir = Left(sTmpPath, InStrRev(sTmpPath, "\"))
+    If iCurrent <= iStarNum Then
+        sFiles(0) = FileSystem.Dir(sTmpPath, vbDirectory)
+        Do While sFiles(iFilesIndex) <> ""
+            Do While sFiles(iFilesIndex) = "." Or sFiles(iFilesIndex) = ".."
+                sFiles(iFilesIndex) = FileSystem.Dir()
+            Loop
+            iFilesIndex = iFilesIndex + 1
+            sFiles(iFilesIndex) = FileSystem.Dir()
+        Loop
+        iFilesIndex = iFilesIndex - 1
+        Dim iDocIndex%
+        For iDocIndex% = 0 To iFilesIndex
+            If (GetAttr(sDir & sFiles(iDocIndex)) And vbDirectory) = vbDirectory Then
+                Call FilePath(sPath, sDir & sFiles(iDocIndex) & "" & sPath(iCurrent + 1), iCurrent + 1, iStarNum, ObjCell_SearchPath)
+            Else
+                If iCurrent = iStarNum Then
+                    Dim iRow%
+                    iRow% = 1
+                    Do While ObjCell_SearchPath.Offset(iRow).Value <> ""
+                        iRow = iRow + 1
+                    Loop
+                    ObjCell_SearchPath.Offset(iRow).Value = sDir & sFiles(iDocIndex)
+                End If
+            End If
+        Next iDocIndex
+    End If
+End Function
+'=============================Group1 Ribbon 2'=============================
+Sub SimpName()
+    Call InitGlobals
+    Dim answer$, result$, original$, startfrom$, endbefore$
+    answer = MsgBox("Keep current result? (Number is not available)", vbQuestion + vbYesNo + vbDefaultButton2, "Clean Result")
+    If answer = vbNo Then ObjCell_Name.ClearContents
+    For Each TmpCell In ObjCell_Result
+        If Trim(TmpCell) <> "" Then
+            original = TmpCell.Value
+            If InStrRev(original, "\") > 0 Then result = Mid(original, InStrRev(original, "\") + 1)
+            If InStrRev(result, ".") > 0 Then result = Left(result, InStrRev(result, ".") - 1)
+            If Trim(result) <> "" Then TmpCell = result
+        End If
+    Next TmpCell
+    '===================Only file name reserve
+    With ObjCell_Name.FormatConditions.AddUniqueValues
+        .DupeUnique = xlDuplicate
+            With .Font
+                .Bold = True
+                .ColorIndex = 3
+            End With
+    End With
+    '===================Highlight duplicate data
+    startfrom = InputBox("StartFrom: ", "Split Index")
+    If StrPtr(startfrom) = 0 Then Call ListFile: End
+    endbefore = InputBox("EndBefore: ", "Split Index")
+    If StrPtr(endbefore) = 0 Then Call ListFile: End
+    For Each TmpCell In ObjCell_Result
+        If Trim(TmpCell) <> "" Then
+            original = TmpCell.Value
+            If InStr(original, startfrom) > 0 Then result = Mid(original, InStr(original, startfrom))
+            If InStrRev(result, endbefore) > 0 Then result = Left(result, InStrRev(result, endbefore) - 1)
+            If Len(result) > 31 - 5 Then result = Left(result, 31 - 6)
+            If Trim(TmpCell.Offset(, SET_NCOL - SET_PATHCOL)) = "" Then TmpCell.Offset(, SET_NCOL - SET_PATHCOL) = result
+        End If
+        result = ""
+    Next TmpCell
+    Call ListFile
+End Sub
+'=============================Group1 Ribbon 3'=============================
+Sub ExtractSheet()
+    Call InitGlobals
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    If WorksheetFunction.CountA(ObjCell_Result) <> 0 Then
+        For Each TmpSheet In WB0.Worksheets
+            If TmpSheet.Name <> ObjWS_Config.Name Then TmpSheet.Delete
+        Next
+    End If
+    '===================If Result is not empty, reset sheets
+    For Each TmpCell In ObjCell_Name
+        If Trim(TmpCell) <> "" And Trim(TmpCell.Offset(, SET_PATHCOL - SET_NCOL)) <> "" Then Call GetWorkSheet(Trim(TmpCell.Offset(, SET_PATHCOL - SET_NCOL)), CStr(TmpCell.Value))
+    Next TmpCell
+    '===================Sheets extracted
+    Dim Flag%
+    For Each TmpSheet In WB0.Worksheets
+        Flag = 0
+        For Each TmpCell In ObjCell_Name
+        '===================If ObjCell_Name has recorded the sheet
+            If Trim(TmpCell) = TmpSheet.Name Then
+                If Trim(TmpCell.Offset(, SET_XCOL - SET_NCOL)) <> "" Then
+                    Dim iRow%: iRow = DataRange(TmpSheet, TmpCell.Offset(, SET_XCOL - SET_NCOL)).Row
+                    If iRow > 6 Then TmpSheet.Rows(2).Resize(iRow - 3).EntireRow.Hidden = True
+                End If
+                Flag = 1
+                '===================Hide other irrelevant rows
+                Exit For
+            End If
+        Next TmpCell
+        If Flag = 0 Then
+            Dim LastCell As Object
+            Set LastCell = ObjWS_Config.Cells(ObjWS_Config.Cells(MAXNUM_FILEFIND, SET_NCOL).End(xlUp).Row + 1, SET_NCOL)
+            LastCell = TmpSheet.Name
+            '===================Add sub-sheets in the Name list
+        End If
+    Next TmpSheet
+    Set TmpCell = ObjCell_Name.Find(What:=ObjWS_Config_Name, SearchOrder:=xlByRows, LookAt:=xlWhole, MatchCase:=True): TmpCell.ClearContents
+    For Each TmpCell In ObjCell_Name
+        If Trim(TmpCell) <> "" Then
+            Flag = 0
+            For Each TmpSheet In WB0.Worksheets
+                If Trim(TmpCell) = TmpSheet.Name Then Flag = 1: Exit For
+            Next TmpSheet
+            If Flag = 0 Then TmpCell.ClearContents
+        End If
+    Next TmpCell
+    '===================Delete Name with no sheet corresponding
+    ObjWS_Config.Select
+    For Each TmpCell In ObjCell_Result
+        TmpCell.ClearContents
+    Next TmpCell
+    '===================Delete Result list
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+Public Function GetWorkSheet(sFilePath As String, sRename As String)
+    'On Error Resume Next
+    On Error GoTo ErrHandle
+    Dim sFileName$, ObjWS_Index As Object
+    sFileName = Mid(sFilePath, InStrRev(sFilePath, "\") + 1)
+    If sRename = "" Then Exit Function
+    If Len(sRename) > 31 Then MsgBox ("Over 31 chrs: " & sRename): Exit Function
+    Workbooks.OpenText Filename:=sFilePath, StartRow:=1, DataType:=xlDelimited, TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=True, Tab:=True, Semicolon:=False, Comma:=True, Space:=False, Other:=False
+    Dim iSheetIndex%
+        For iSheetIndex = 1 To Workbooks(sFileName).Worksheets.Count
+            Set ObjWS_Index = Workbooks(sFileName).Worksheets(iSheetIndex)
+            If Workbooks(sFileName).Worksheets.Count > 1 Then
+                If Len(sRename) < 31 - 6 - 1 Then ObjWS_Index.Name = sRename & " (" & CStr(iSheetIndex) & ")"
+                If iSheetIndex = 1 Then ObjWS_Index.Name = sRename
+            Else
+                ObjWS_Index.Name = sRename
+            End If
+            ObjWS_Index.Copy after:=WB0.Worksheets(WB0.Worksheets.Count)
+        Next iSheetIndex
+    Workbooks(sFileName).Close savechanges:=False
+    Exit Function
+ErrHandle:
+    MsgBox ("Suffered error for " & sRename)
+End Function
+Public Function DataRange(ByVal Datasheet As Object, sPara$) As Range
+    Dim iCnt%, DataCell As Range
+    If Datasheet.FilterMode Then Datasheet.ShowAllData
+    If Len(Trim(sPara)) = 1 Then
+        Set DataCell = Datasheet.Cells.Find(What:=sPara, SearchOrder:=xlByRows, LookAt:=xlWhole, MatchCase:=True)
+        If DataCell Is Nothing Then Set DataCell = Datasheet.Cells.Find(What:=Chr(32) & sPara, SearchOrder:=xlByRows, LookAt:=xlWhole, MatchCase:=True)
+    Else
+        Set DataCell = Datasheet.Cells.Find(What:=sPara, SearchOrder:=xlByRows, LookAt:=xlPart, MatchCase:=True)
+    End If
+      Do While iCnt < MAXNUM_DATAFINDTIME
+        If DataCell Is Nothing Then MsgBox ("Cannot find " & sPara & " for " & Datasheet.Name): Set DataRange = Datasheet.Cells(1, 1): Exit Do
+        If Trim(DataCell.Value) = sPara And IsNumeric(DataCell.Offset(1).Text) And IsNumeric(DataCell.Offset(2).Text) And IsNumeric(DataCell.Offset(3).Text) Then
+            Set DataRange = DataCell.Offset(1).Resize(DataCell.End(xlDown).Row - DataCell.Row)
+            Exit Function
+        Else
+            Set DataCell = Datasheet.Cells.FindNext(DataCell)
+            iCnt = iCnt + 1
+        End If
+    Loop
+    Set DataRange = Datasheet.Cells(1, 1)
+    MsgBox ("Cannot find " & sPara & " for " & Datasheet.Name)
+End Function
+'=============================Group2 Ribbon 1'=============================%
+Sub ChartGen()
+    Call InitGlobals
+    Dim iSheetNum%, ChartName$, sParaX$, sParaY$, sParaY2$, sFilter$, myChart As Chart
+    Dim Color(MAXNUM_CURVESERIES) As Variant, iCnt%, iGroup%, iLeft%, iTop%: iLeft = SET_CHTL: iTop = SET_CHTT
+    If ObjWS_Config.ChartObjects.Count > 0 Then ObjWS_Config.ChartObjects.Delete
+    Dim iBlank%
+    For Each TmpCell In ObjCell_Name
+        If Trim(TmpCell) <> "" And TmpCell.Interior.Pattern = xlNone Then TmpCell.Interior.Color = 16777215 - 65793 * iBlank: iBlank = iBlank + 1
+    Next TmpCell
+    '===================Blank cells in ObjCell_Name mark grey
+    For Each TmpCell In ObjCell_Name
+        If Trim(TmpCell) <> "" And TmpCell.Interior.Pattern <> xlNone And Not IsInArray(TmpCell.Interior.Color, Color()) Then: Color(iCnt) = TmpCell.Interior.Color: iCnt = iCnt + 1
+        If iCnt > MAXNUM_CURVESERIES Then End
+    Next TmpCell
+    '===================Color array update
+    For iGroup = 0 To iCnt - 1
+        ChartName = ""
+        Set myChart = ObjWS_Config.ChartObjects.Add(Left:=iLeft, Top:=iTop, Width:=SET_CHTW, Height:=SET_CHTH).Chart: myChart.ChartType = xlXYScatter
+        For Each TmpCell In ObjCell_Name
+            If Trim(TmpCell) <> "" And IsNumeric(TmpCell) Then MsgBox ("Number Name is not available"): End
+            If TmpCell.Interior.Color = Color(iGroup) And CheckSheet(CStr(TmpCell.Value)) Then
+                If ChartName = "" Then ChartName = Trim(TmpCell): sParaY2 = Trim(TmpCell.Offset(, SET_YCOL - SET_NCOL))
+                sParaX = Trim(TmpCell.Offset(, SET_XCOL - SET_NCOL)): sParaY = Trim(TmpCell.Offset(, SET_YCOL - SET_NCOL))
+                sFilter = Trim(TmpCell.Offset(, SET_INTCOL - SET_NCOL))
+                Call Data2Chart(myChart, WB0.Worksheets(CStr(TmpCell.Value)), sFilter, sParaX, sParaY)
+                If sParaY <> sParaY2 Then myChart.SeriesCollection(myChart.SeriesCollection.Count).AxisGroup = 2
+            End If
+        Next TmpCell
+    Call ChartProperty(myChart, ChartName, sParaX, sParaY)
+    If myChart.HasAxis(xlCategory, xlSecondary) = True Then
+        With myChart.Axes(xlValue, xlSecondary)
+            .HasTitle = True
+            .AxisTitle.Text = sParaY
+            .Crosses = xlMinimum
+            .MajorTickMark = xlInside
+            .HasMajorGridlines = True
+            .MajorGridlines.Border.LineStyle = xlDash
+            .MajorGridlines.Border.ColorIndex = 15
+            .Format.Line.Visible = msoFalse
+        End With
+    End If
+    '===================Set Y2 axis
+    If (ObjWS_Config.ChartObjects.Count) Mod SET_CHTC = 0 Then
+        iLeft = SET_CHTL: iTop = iTop + SET_CHTH
+    Else
+        iLeft = iLeft + SET_CHTW
+    End If
+    Next iGroup
+    '===================Set chart counts per row
+    Dim srs As Series, chartset As ChartObject, iCurve%
+    iCurve = 1
+        For Each chartset In ObjWS_Config.ChartObjects
+            For Each srs In chartset.Chart.SeriesCollection
+                ObjCell_SearchPath.Offset(iCurve) = srs.Name
+                'ObjCell_SearchPath.Offset(iCurve).Interior.ColorIndex = srs.MarkerForegroundColorIndex
+                'ObjCell_SearchPath.Offset(iCurve, SET_NCOL - SET_PATHCOL) = chartset.Chart.ChartTitle.Text
+                iCurve = iCurve + 1
+            Next srs
+    Next chartset
+    '===================Add series info at ObjCell_Result
+End Sub
+Public Function ChartProperty(myChart As Chart, ChartName$, sParaX$, sParaY$)
+    With myChart
+        .HasTitle = True: .ChartTitle.Text = ChartName
+        .PlotArea.Border.LineStyle = xlSolid: .PlotArea.Border.Weight = 3: .PlotArea.Border.ColorIndex = 1
+        .HasLegend = True: .Legend.IncludeInLayout = False: .Legend.Position = xlLegendPositionBottom
+        .Legend.Font.Size = 12: If .SeriesCollection.Count > 9 Then .Legend.Font.Size = 10
+        .Legend.Width = SET_CHTW - 2: .Legend.Height = 0.15 * SET_CHTH
+        .Legend.Left = 2: .Legend.Top = SET_CHTH - myChart.Legend.Height
+        .PlotArea.Height = 0.7 * SET_CHTH
+        With .Axes(xlCategory, xlPrimary) 'X
+            .HasTitle = True
+            .AxisTitle.Text = sParaX
+            .Crosses = xlMinimum
+            .MajorTickMark = xlInside
+            .HasMajorGridlines = True
+            .MajorGridlines.Border.LineStyle = xlDash
+            .MajorGridlines.Border.ColorIndex = 15
+            .Format.Line.Visible = msoFalse
+        End With
+        With .Axes(xlValue, xlPrimary)
+            .HasTitle = True
+            .AxisTitle.Text = sParaY
+            .Crosses = xlMinimum
+            .MajorTickMark = xlInside
+            .HasMajorGridlines = True
+            .MajorGridlines.Border.LineStyle = xlDash
+            .MajorGridlines.Border.ColorIndex = 15
+            .Format.Line.Visible = msoFalse
+        End With
+    End With
+    Dim srs As Series
+    For Each srs In myChart.SeriesCollection
+            srs.MarkerStyle = xlMarkerStyleCircle
+            srs.MarkerSize = 3
+            srs.MarkerBackgroundColorIndex = xlColorIndexNone
+    Next srs
+End Function
+Public Function DataArray(ByVal DataRng As Range) As Variant
+    Dim iCnt%, TmpArray() As Variant
+    ReDim TmpArray(0)
+    If DataRng Is Nothing Then: DataArray = TmpArray: Exit Function
+    ReDim TmpArray(0 To DataRng.Count)
+    For iCnt = 0 To DataRng.Count
+        TmpArray(iCnt) = DataRng(iCnt + 1).Value
+    Next iCnt
+    DataArray = TmpArray
+End Function
+Public Function Data2Chart(myChart As Chart, ByVal Datasheet As Object, sFilter$, sParaX$, sParaY$)
+    Dim iRow%, iInterval%, iCnt%, DataCell As Range, DataFilter As Range
+    If sFilter <> "" Then
+        iInterval = 0: iRow = 0: iCnt = 0
+        Set DataFilter = DataRange(Datasheet, sFilter)
+        If DataFilter Is Nothing Then Exit Function
+        For Each DataCell In DataFilter
+            If iCnt > MAXNUM_CURVESERIES Then MsgBox ("Too many curves for " & Datasheet.Name): Exit Function
+            iRow = iRow + 1
+            If DataCell.Value <> DataCell.Offset(1).Value Then
+                If iInterval = 0 Then iInterval = iRow
+                If iInterval = 0 Then Exit Function
+                With myChart.SeriesCollection.NewSeries
+                    .MarkerSize = 3
+                    .MarkerBackgroundColorIndex = xlColorIndexNone
+                    '.MarkerForegroundColorIndex = xlColorIndexNone
+                    .XValues = DataArray(DataRange(Datasheet, sParaX).Offset(iCnt * iInterval).Resize(iInterval))
+                    .Values = DataArray(DataRange(Datasheet, sParaY).Offset(iCnt * iInterval).Resize(iInterval))
+                    .Name = Datasheet.Name & " " & sFilter & " = " & DataCell.Value
+                End With
+                If DataCell.Offset(1).Value = "" Then: Exit For
+                iCnt = iCnt + 1
+            End If
+        Next DataCell
+    Else
+        With myChart.SeriesCollection.NewSeries
+            .XValues = DataArray(DataRange(Datasheet, sParaX))
+            .Values = DataArray(DataRange(Datasheet, sParaY))
+            .Name = Datasheet.Name
+        End With
+    End If
+End Function
+Public Function CheckSheet(sWSName As String) As Boolean
+    Dim IsExist As Boolean, iTmpSheet%
+    IsExist = False
+    For iTmpSheet = 1 To Application.ActiveWorkbook.Sheets.Count
+        If Application.ActiveWorkbook.Sheets(iTmpSheet).Name = sWSName Then
+            IsExist = True
+            Exit For
+        End If
+    Next
+    CheckSheet = IsExist
+End Function
+Public Function IsInArray(FoundString As String, arr As Variant) As Boolean
+    Dim i%
+    For i = LBound(arr) To UBound(arr)
+        If arr(i) = FoundString Then
+            IsInArray = True
+            Exit Function
+        End If
+    Next i
+    IsInArray = False
+End Function
+'=============================Group2 Ribbon 2'=============================
+Sub RenderColor()
+    Call InitGlobals
+    Dim srs As Series, chartset As ChartObject
+    For Each chartset In ObjWS_Config.ChartObjects
+            For Each srs In chartset.Chart.SeriesCollection
+                For Each TmpCell In ObjCell_Result
+                    Dim Flag%: Flag = 0
+                    If (InStr(srs.Name, TmpCell.Value) Or srs.Name = TmpCell.Value) And TmpCell.Value <> "" And (Flag = 0 Or srs.Name = TmpCell.Value) Then
+                        Flag = 1
+                        'srs.Border.Color = TmpCell.Interior.Color
+                        If TmpCell.Interior.Pattern = xlNone Then
+                            srs.MarkerForegroundColor = -1
+                        Else
+                            srs.MarkerForegroundColor = TmpCell.Interior.Color
+                        End If
+                    End If
+                Next TmpCell
+            Next srs
+    Next chartset
+End Sub
+'=============================Group2 Ribbon 3'=============================
+Sub ColorIndex()
+    Call InitGlobals
+    Dim rCnt%, cCnt%
+    rCnt = SET_INTROW: cCnt = SET_NCOL
+    If ObjCell_SearchPath.Offset(1).Interior.Pattern = xlNone Then
+        Do While rCnt < 16
+            ObjCell_SearchPath.Offset(rCnt).Interior.ColorIndex = rCnt + 32
+            'Cells(rCnt, cCnt) = rCnt
+            rCnt = rCnt + 1
+        Loop
+    Else
+        ObjCell_Result.ClearFormats
+    End If
+End Sub
+'=============================Group3 Ribbon 1'=============================%
+Sub Export()
+    Call InitGlobals
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Dim WBNew As Workbook
+    Dim sDir As String, sTmpPath As String, sWBNewFile$, sWBName$
+    sTmpPath = Left((Trim(ObjCell_SearchPath)), InStrRev(Trim(ObjCell_SearchPath), "\"))
+    sWBName = InputBox("ReName the Workbook as", "Save As:", "Result " & Format(Now(), "dd-mm-yy hh mm"))
+    If StrPtr(sWBName) = 0 Then End
+    sWBNewFile = sTmpPath & CStr(sWBName) & ".xlsm"
+    If Dir(sTmpPath & CStr(sWBName) & ".xlsx") = "" Then
+        WB0.SaveCopyAs Filename:=sWBNewFile
+        Set WBNew = Workbooks.Open(Filename:=sWBNewFile)
+    Dim Shp As Shape
+        For Each Shp In WBNew.Worksheets(ObjWS_Config_Name).Shapes
+            If Shp.Type = msoShapeRectangle Then Shp.Delete
+        Next
+        WBNew.Worksheets(ObjWS_Config_Name).Columns(1).Resize(, SET_PATHCOL).Delete Shift:=xlToLeft ' Delete config page
+        ActiveWindow.Zoom = 70
+        WBNew.SaveAs Left(sWBNewFile, Len(sWBNewFile) - 1) & "x", 51
+        WBNew.Close False
+        Kill sWBNewFile
+    Else
+        MsgBox ("File already exists.")
+    End If
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+'=============================Group3 Ribbon 2'=============================
+Sub LoadPPT()
+    Call InitGlobals
+    Dim iCnt%, iSld%, Shp As Object, chtObj As Object, ObjPPT As Object, ObjPPTSld As Object
+    Set ObjPPT = CreateObject("PowerPoint.Application").Presentations.Add
+    iSld = 1
+  For Each chtObj In WB0.Worksheets(ObjWS_Config_Name).ChartObjects
+      If iCnt = 0 Then Set ObjPPTSld = ObjPPT.Slides.Add(iSld, 12)
+      iCnt = iCnt + 1
+      chtObj.CopyPicture
+      Set Shp = ObjPPTSld.Shapes.Paste
+      Shp.Width = 320
+      Shp.Height = 180
+      Shp.Left = 10 + ((iCnt - 1) Mod SET_CHTC) * Shp.Width
+      If SET_CHTC = 3 Then Shp.Left = 120 + ((iCnt - 1) Mod SET_CHTC) * Shp.Width
+      Shp.Top = 0 + Int((iCnt - 1) / SET_CHTC) * Shp.Height
+      If iCnt = 9 Then iCnt = 0: iSld = iSld + 1
+  Next chtObj
+End Sub
+'=============================Group4 Ribbon 1'=============================
+Sub Reset()
+    Call InitGlobals
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    If ObjWS_Config.ChartObjects.Count > 0 Then ObjWS_Config.ChartObjects.Delete
+    For Each TmpSheet In WB0.Worksheets
+        If TmpSheet.Name <> ObjWS_Config.Name Then TmpSheet.Delete
+    Next
+    With ObjCell_Result.Offset(, SET_INTCOL - SET_PATHCOL).Resize(, SET_PATHCOL - SET_INTCOL + 1)
+        .ClearFormats
+        .Font.Name = "Calibri"
+        .Font.Size = 11
+        .Font.Bold = False
+        .HorizontalAlignment = xlCenter
+    End With
+    ObjCell_Result.HorizontalAlignment = xlLeft
+    ObjCell_Result.ClearContents
+    'ObjCell_Result.Font.ColorIndex = 48
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+
+Sub SetPage()
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    ActiveWorkbook.Worksheets(1).Name = ObjWS_Config_Name
+    Call InitGlobals
+    ActiveWorkbook.Worksheets(1).Cells.ClearContents
+    ActiveWorkbook.Worksheets(1).Cells.ClearFormats
+    ActiveWorkbook.Worksheets(1).Cells.Font.Name = "Calibri"
+    ActiveWorkbook.Worksheets(1).Cells.Font.Size = 11
+    For Each TmpCell In WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_INTCOL).Resize(, SET_PATHCOL - SET_INTCOL + 1)
+        With TmpCell
+            .Font.Name = "Calibri"
+            .Font.Size = 11
+            .Font.Bold = True
+            .Font.ColorIndex = 1
+            .Interior.ThemeColor = xlThemeColorDark1
+            .Interior.TintAndShade = -0.05
+            .HorizontalAlignment = xlCenter
+            .VerticalAlignment = xlCenter
+            .ColumnWidth = 8.38
+            .Borders(xlEdgeLeft).LineStyle = xlContinuous
+            .Borders(xlEdgeTop).LineStyle = xlContinuous
+            .Borders(xlEdgeBottom).LineStyle = xlContinuous
+            '.Borders(xlEdgeRight).LineStyle = xlContinuous
+        End With
+    Next TmpCell
+    WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_INTCOL).Value = "Filter"
+    WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_YCOL).Value = "Sense"
+    WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_XCOL).Value = "Force"
+    WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_NCOL).Value = "Sheet Name"
+    WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_PATHCOL).Value = "<Path>"
+    WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_NCOL).ColumnWidth = 25.14
+    With WB0.Worksheets(ObjWS_Config_Name).Cells(SET_INTROW, SET_PATHCOL)
+        .Interior.ColorIndex = 15
+        .HorizontalAlignment = xlLeft
+    End With
+    Dim Shp As Shape, iColor%: iColor = 1
+            For Each Shp In WB0.Worksheets(ObjWS_Config_Name).Shapes
+            If Shp.Type = msoShapeRectangle Then Shp.Delete
+        Next
+    For Each TmpCell In WB0.Worksheets(ObjWS_Config_Name).Cells(1, SET_BTTCOL).Resize(9)
+        TmpCell.ColumnWidth = 12
+        Set Shp = WB0.Worksheets(ObjWS_Config_Name).Shapes.AddShape(msoShapeRectangle, TmpCell.Left, TmpCell.Top, TmpCell.Width, TmpCell.Height)
+        With Shp
+            .TextFrame2.TextRange.Text = "Click"
+            .TextFrame2.TextRange.Font.Name = "Calibri"
+            .TextFrame2.TextRange.Font.Size = 11
+            .TextFrame2.TextRange.Font.Italic = True
+            .TextFrame2.TextRange.Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
+            .TextFrame.HorizontalAlignment = xlHAlignCenter
+            .TextFrame.VerticalAlignment = xlVAlignCenter
+            .Fill.ForeColor.RGB = RGB(135 - 10 * iColor, 206 - 10 * iColor, 255 - 10 * iColor)
+            If iColor > 3 Then .Fill.ForeColor.RGB = RGB(255 - 20 * iColor, 222 - 10 * iColor, 173 - 10 * iColor)
+            If iColor > 6 Then .Fill.ForeColor.RGB = RGB(255 - 10 * iColor, 64 - 2 * iColor, 64 - 2 * iColor)
+        End With
+        iColor = iColor + 1
+    Next TmpCell
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).TextFrame2.TextRange.Text = "ListFile"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(1).OnAction = "ListFile"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(2).TextFrame2.TextRange.Text = "SimpName"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(2).OnAction = "SimpName"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(3).TextFrame2.TextRange.Text = "ExtractSheet"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(3).OnAction = "ExtractSheet"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(4).TextFrame2.TextRange.Text = "ChartGen"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(4).OnAction = "ChartGen"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(5).TextFrame2.TextRange.Text = "RenderColor"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(5).OnAction = "RenderColor"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(6).TextFrame2.TextRange.Text = "ColorIndex"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(6).OnAction = "ColorIndex"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(7).TextFrame2.TextRange.Text = "Export"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(7).OnAction = "Export"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(8).TextFrame2.TextRange.Text = "LoadPPT"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(8).OnAction = "LoadPPT"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(9).TextFrame2.TextRange.Text = "Reset"
+    WB0.Worksheets(ObjWS_Config_Name).Shapes(9).OnAction = "Reset"
+End Sub
