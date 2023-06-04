@@ -15,9 +15,9 @@ Public Const SET_CHTW As Integer = 400
 Public Const SET_CHTH As Integer = 300
 Public Const SET_CHTC As Integer = 3
 '===================Chart count per row
-Public Const SET_INTROW As Integer = 1: Public Const SET_INTCOL As Integer = 1
+Public Const SET_INTROW As Integer = 1: Public Const SET_INTCOL As Integer = 2
 '===================Initial             =Position=
-Public Const SET_BTTROW As Integer = SET_INTROW: Public Const SET_BTTCOL As Integer = SET_INTCOL: Public Const SET_BTTCNT As Integer = 11 
+Public Const SET_BTTROW As Integer = SET_INTROW: Public Const SET_BTTCOL As Integer = SET_INTCOL - 1: Public Const SET_BTTCNT As Integer = 11 
 '===================Button              =Position=
 Public Const SET_CALCROW As Integer = SET_BTTCNT + 1: Public Const SET_CALCCOL As Integer = SET_BTTCOL: Public Const SET_OFFSET As Integer = 15
 '===================Calculate           =Position=
@@ -30,7 +30,7 @@ Sub ListFile()
     Call InitGlobals
     Dim iStarNum%, sSearchPath$, sSplitPath(MAXNUM_STARMARK) As String
     sSearchPath = ObjCell_SearchPath.Value
-	If sSearchPath = "" Then End
+	If sSearchPath = "" Or sSearchPath = "<Path>" Then End
 	If Instr(sSearchPath, "*") = 0 Then sSearchPath = sSearchPath & "\*"
     'ObjCell_Name.ClearContents
     ObjCell_Result.ClearContents ' Initial
