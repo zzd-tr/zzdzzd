@@ -1,0 +1,134 @@
+Function CalcIoff(ObjNewWBWS As Object, ObjVTargetCells() As Object, ObjITargetCells() As Object, Width#, Length#, Vcc#, Vgg#, ByRef dIoff#) As Boolean
+    CalcIoff = False
+    'Check
+    If (ObjVTargetCells(0) Is Nothing) Or (ObjITargetCells(0) Is Nothing) Then
+        CalcIoff = False
+        Exit Function
+    End If
+    Dim NPType%
+    If Vcc >= 0 Then
+        NPType = 1
+    Else
+        NPType = -1
+    End If
+    'Filter the data
+    Dim sFilterLabel(MAXFILTERNUM) As String, dFilterValue(MAXFILTERNUM) As Double, iFilters%
+    iFilters = -1
+    If Not (ObjVTargetCells(2) Is Nothing) Then
+        iFilters = iFilters + 1
+        sFilterLabel(iFilters) = ObjVTargetCells(2).Value
+        dFilterValue(iFilters) = 0
+    End If
+    If Not (ObjVTargetCells(3) Is Nothing) Then
+        iFilters = iFilters + 1
+        sFilterLabel(iFilters) = ObjVTargetCells(3).Value
+        dFilterValue(iFilters) = 0
+    End If
+    If Not (ObjVTargetCells(1) Is Nothing) Then
+        iFilters = iFilters + 1
+        sFilterLabel(iFilters) = ObjVTargetCells(1).Value
+        dFilterValue(iFilters) = 0
+    End If
+    Dim iFilterStartRow%, iFilterEndRow%
+    iFilterStartRow = ObjITargetCells(0).Offset(1, 0).Rows(1).Row
+'    iFilterEndRow = ObjITargetCells(0).Offset(1, 0).End(xlDown).Rows(1).Row
+    iFilterEndRow = ObjNewWBWS.Cells.SpecialCells(xlLastCell).Row
+    If SearchFilters(ObjNewWBWS, iFilterStartRow, iFilterEndRow, sFilterLabel(), dFilterValue(), iFilters, True) = False Then
+        CalcIoff = False
+        Exit Function
+    End If
+    'Calculate the Idlin
+    Dim i%, IdL#, IdH#, VdL#, VdH#
+    For i = iFilterStartRow + 1 To iFilterEndRow
+'        If (CDbl(ObjITargetCells(0).Offset(i - 1, 0).Value) * NPType >= 0) And (CDbl(ObjITargetCells(0).Offset(i - 2, 0).Value) * NPType >= 0) Then
+            IdL = ObjITargetCells(0).Offset(i - 2, 0).Value
+            IdH = ObjITargetCells(0).Offset(i - 1, 0).Value
+            VdL = ObjVTargetCells(0).Offset(i - 2, 0).Value
+            VdH = ObjVTargetCells(0).Offset(i - 1, 0).Value
+            If (VdL - 9 * NPType) * (VdH - 9 * NPType) < 0 Then
+                dIoff = (9 * NPType - VdL) / (VdH - VdL) * (IdH - IdL) + IdL
+                CalcIoff = True
+                Exit For
+            ElseIf VdH = 9 * NPType Then
+                dIoff = IdH
+                CalcIoff = True
+                Exit For
+            End If
+'        End If
+    Next i
+End Function
+Function CalcBVoff(ObjNewWBWS As Object, ObjVTargetCells() As Object, ObjITargetCells() As Object, Width#, Length#, Vcc#, Vgg#, ByRef dVbvoff#) As Boolean
+    CalcBVoff = False
+    'Check
+    If (ObjVTargetCells(0) Is Nothing) Or (ObjITargetCells(0) Is Nothing) Then
+        CalcBVoff = False
+        Exit Function
+    End If
+    Dim NPType%
+    If Vcc >= 0 Then
+        NPType = 1
+    Else
+        NPType = -1
+    End If
+    'Filter the data
+    Dim sFilterLabel(MAXFILTERNUM) As String, dFilterValue(MAXFILTERNUM) As Double, iFilters%
+    iFilters = -1
+    If Not (ObjVTargetCells(2) Is Nothing) Then
+        iFilters = iFilters + 1
+        sFilterLabel(iFilters) = ObjVTargetCells(2).Value
+        dFilterValue(iFilters) = 0
+    End If
+    If Not (ObjVTargetCells(3) Is Nothing) Then
+        iFilters = iFilters + 1
+        sFilterLabel(iFilters) = ObjVTargetCells(3).Value
+        dFilterValue(iFilters) = 0
+    End If
+    If Not (ObjVTargetCells(1) Is Nothing) Then
+        iFilters = iFilters + 1
+        sFilterLabel(iFilters) = ObjVTargetCells(1).Value
+        dFilterValue(iFilters) = 0
+    End If
+    Dim iFilterStartRow%, iFilterEndRow%
+    iFilterStartRow = ObjITargetCells(0).Offset(1, 0).Rows(1).Row
+'    iFilterEndRow = ObjITargetCells(0).Offset(1, 0).End(xlDown).Rows(1).Row
+    iFilterEndRow = ObjNewWBWS.Cells.SpecialCells(xlLastCell).Row
+    If SearchFilters(ObjNewWBWS, iFilterStartRow, iFilterEndRow, sFilterLabel(), dFilterValue(), iFilters, True) = False Then
+        CalcBVoff = False
+        Exit Function
+    End If
+    'Calculate the Idlin
+    Dim i%, IdL#, IdH#, VdL#, VdH#
+    For i = iFilterStartRow + 1 To iFilterEndRow
+        If (CDbl(ObjITargetCells(0).Offset(i - 1, 0).Value) * NPType >= 0) And (CDbl(ObjITargetCells(0).Offset(i - 2, 0).Value) * NPType >= 0) Then
+            IdL = ObjITargetCells(0).Offset(i - 2, 0).Value
+            IdH = ObjITargetCells(0).Offset(i - 1, 0).Value
+            VdL = ObjVTargetCells(0).Offset(i - 2, 0).Value
+            VdH = ObjVTargetCells(0).Offset(i - 1, 0).Value
+            If (IdL - 5 * 10 ^ (-6) * NPType) * (IdH - 5 * 10 ^ (-6) * NPType) < 0 Then
+                dVbvoff = VdL
+                CalcBVoff = True
+                Exit For
+            ElseIf IdH = 5 * 10 ^ (-6) * NPType Then
+                dVbvoff = VdH
+                CalcBVoff = True
+                Exit For
+            ElseIf ObjITargetCells(0).Offset(i - 1, 0).Value = "" And ObjVTargetCells(0).Offset(i - 1, 0).Value <> "" Then
+                dVbvoff = VdL
+                CalcBVoff = True
+                Exit For
+            End If
+        End If
+    Next i
+End Function
+
+Function CNtoAB(row%, column%) As String 'Column num to Column alpha
+    Dim s$, va%, vb%
+    s = ""
+    va = column
+    Do
+        vb = (va - 1) Mod 26 + 1
+        va = Int((va - 1) / 26)
+        s = Chr(64 + vb) & s
+    Loop While va > 0
+    CNtoAB = s & row
+End Function
