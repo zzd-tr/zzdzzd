@@ -8,7 +8,7 @@ Public Const MAXNUM_FILEFIND As Integer = 100
 Public Const MAXNUM_DATAFIND As Integer = 15
 Public Const MAXNUM_CURVESERIES As Integer = 50
 Public Const MAXNUM_CALRESULT As Integer = 20
-'===================Chart profile       =Position=
+'===================Chart profile       ===Position===
 Public Const SET_CHTL As Integer = 446
 Public Const SET_CHTT As Integer = 15
 Public Const SET_CHTW As Integer = 400
@@ -16,16 +16,16 @@ Public Const SET_CHTH As Integer = 300
 Public Const SET_CHTC As Integer = 3
 '===================Chart count per row
 Public Const SET_INTROW As Integer = 1: Public Const SET_INTCOL As Integer = 2
-'===================Initial             =Position=
+'===================Initial             ===Position===
 Public Const SET_BTTROW As Integer = SET_INTROW: Public Const SET_BTTCOL As Integer = SET_INTCOL - 1: Public Const SET_BTTCNT As Integer = 11 
-'===================Button              =Position=
+'===================Button              ===Position===
 Public Const SET_CALCROW As Integer = SET_BTTCNT + 1: Public Const SET_CALCCOL As Integer = SET_BTTCOL: Public Const SET_OFFSET As Integer = 15
-'===================Calculate           =Position=
+'===================Calculate           ===Position===
 
 Public Const SET_YCOL As Integer = SET_INTCOL + 1: Public Const SET_XCOL As Integer = SET_INTCOL + 2
 Public Const SET_NCOL As Integer = SET_INTCOL + 3: Public Const SET_PATHCOL As Integer = SET_INTCOL + 4
 
-'=============================Ribbon 1 - 1'=============================%
+'=============================Ribbon 1 - 1'=============================
 Sub ListFile()
     Call InitGlobals
     Dim iStarNum%, sSearchPath$, sSplitPath(MAXNUM_STARMARK) As String
@@ -33,9 +33,9 @@ Sub ListFile()
 	If sSearchPath = "" Or sSearchPath = "<Path>" Then End
 	If Instr(sSearchPath, "*") = 0 Then sSearchPath = sSearchPath & "\*"
     'ObjCell_Name.ClearContents
-    ObjCell_Result.ClearContents ' Initial
+    ObjCell_Result.ClearContents
     If Trim(sSearchPath) = "" Then Exit Sub
-    Dim iStarPos%, iBackSlashPos% ' STAR* searching loop
+    Dim iStarPos%, iBackSlashPos%
     For iStarNum = 0 To MAXNUM_STARMARK
         iStarPos = InStr(sSearchPath, "*")
         If iStarPos > 0 Then
@@ -233,7 +233,7 @@ Public Function DataRange(ByVal Datasheet As Object, sPara$) As Range
     Set DataRange = Datasheet.Cells(1, 1)
     MsgBox ("Cannot find " & sPara & " for " & Datasheet.Name)
 End Function
-'=============================Ribbon 2 - 1'=============================%
+'=============================Ribbon 2 - 1'=============================
 Sub ChartGen()
     Call InitGlobals
     Dim iSheetNum%, ChartName$, sParaX$, sParaY$, sParaY2$, sFilter$, myChart As Chart
@@ -432,7 +432,7 @@ Sub ColorIndex()
         ObjCell_Result.Font.Name = "Calibri"
     End If
 End Sub
-'=============================Ribbon 3 - 1'=============================%
+'=============================Ribbon 3 - 1'=============================
 Sub SaveExcel()
     Call InitGlobals
 	If WB0.Worksheets.Count < 2 Then End
@@ -451,7 +451,8 @@ Sub SaveExcel()
         For Each Shp In WBNew.Worksheets(ObjWS_Config_Name).Shapes
             If Shp.Type = msoShapeRectangle Then Shp.Delete
         Next
-        WBNew.Worksheets(ObjWS_Config_Name).Columns(1).Resize(, SET_PATHCOL).Delete Shift:=xlToLeft ' Delete config page
+        WBNew.Worksheets(ObjWS_Config_Name).Columns(1).Resize(, SET_PATHCOL).Delete Shift:=xlToLeft
+        '===================Delete config page wording
         ActiveWindow.Zoom = 85
         WBNew.SaveAs Left(sWBNewFile, Len(sWBNewFile) - 1) & "x", 51
         WBNew.Close False
@@ -489,19 +490,22 @@ Sub MailTo()
 	Const PR_ATTACH_MIME_TAG = "http://schemas.microsoft.com/mapi/proptag/0x370E001E"
 	Const PR_ATTACH_CONTENT_ID = "http://schemas.microsoft.com/mapi/proptag/0x3712001E"
 	Dim olApp As Object, olMail As Object
-	Dim msg$, msgGreeting$, msgPara$, msgEnding$
+	Dim msg$, msgGreeting$, msgBody$, msgEnding$
 	Dim cht As ChartObject, fname$, ident$, iCnt%
 	Dim tempFiles As Collection
 	Dim imgIdents As Collection
 	Dim imgFile As Variant
 	Dim attchmt As Object, oPa As Object
 	Dim Owner$, FileName$: Owner = "HYLIUAA"
-	'--- create the email body with HTML-formatted content
-	msgGreeting = "<font face=Calibri>" & "Dear Sirs,<br><br>"
-	msgPara = "<div>Here is the data required.</div><html><font face=Calibri>ChartGen checked items:" & "<br>" & "<font color=red><b>" & Replace("[Content]", Chr(10), "<br>") & "</font></p></b>"
-	msgEnding = "<br><br>Best Regards,<br><br>"
-	msg = msgGreeting & msgPara
-	'--- loops and adds all charts found on the worksheet
+	'===================Create the email body with HTML-formatted content
+	msgGreeting = "<font face=Calibri>" & "Dear " & Owner & ",<br><br>"
+	msgBody = "Opened the sheets that contain your required Excel data. Create a new mail with the charts as the below and store them in PPT/Excel.<br>" & _
+        "<font color=#ff0000><u>[Series can be classified by color]</u><br>" & _
+        "<br><br><font color=#4f81bd><strong>ChartAutoGen:</strong><font color=#000000><br><br>" & _
+        "Each of the images is referenced as a filename, but each one must be individually added as an attachment, then the attachment properties set to show the attachment as inline.<br><br>"
+	msgEnding = "<br><br>Best Regards.<br>"
+	msg = msgGreeting & msgBody
+	'===================Loops and adds all charts found on the worksheet
 	If WB0.Worksheets(ObjWS_Config_Name).ChartObjects.Count > 0 Then
 		Set tempFiles = New Collection
 		Set imgIdents = New Collection
@@ -519,7 +523,7 @@ Sub MailTo()
 	End If
 	msg = msg & msgEnding
 	'FileName = Application.GetOpenFilename(FileFilter:= "All Files (*.*), *.*")
-	'--- create the mail item
+	'===================Create the mail item
 	Set olApp = CreateObject("Outlook.Application")
 	Set olMail = olApp.CreateItem(0)'olMailItem
 	With olMail
@@ -528,8 +532,8 @@ Sub MailTo()
 		.CC = ""
 		.Subject = "[ChartAutoGen]" & " " & Owner & "- " & "ChartGen need your confirm"
 		.BodyFormat = 2        'olFormatHTML=2
-		'each of the images is referenced as a filename, but each one must be individually added as an attachment, then the attachment properties
-		'set to show the attachment as "inline". Because the image will be inlined, we'll use the "ident" as the reference (internal to the message body HTML)
+		'each of the images is referenced as a filename, but each one must be individually added as an attachment, then the attachment properties set to show the attachment as "inline". 
+        'Because the image will be inlined, we'll use the "ident" as the reference (internal to the message body HTML)
 		If (Not tempFiles Is Nothing) Then
 			For iCnt = 1 To tempFiles.Count
 				Set attchmt = .attachments.Add(tempFiles.Item(iCnt))
@@ -542,15 +546,15 @@ Sub MailTo()
 		.HTMLBody = msg
 		.Display '.Send
 	End With
-	'--- delete the temp files now
+	'===================Delete the temp files now
 	For Each imgFile In tempFiles
 		Kill imgFile
 	Next imgFile
-	'--- clean up and get out
+	'===================Clean up and get out
 	Set tempFiles = Nothing
 	Set imgIdents = Nothing
 	Set attchmt = Nothing
-	'Set oPa = Nothing
+	Set oPa = Nothing
 	Set olMail = Nothing
 	Set olApp = Nothing
 	'ActiveWorkbook.Close False
@@ -581,7 +585,7 @@ Private Function RandomString(strlen As Integer) As String
 	Next i
 	RandomString = strTemp
 End Function
-'=============================Ribbon 5 - 1'=============================%
+'=============================Ribbon 5 - 1'=============================
 Sub Reset()
     Call InitGlobals
     Application.DisplayAlerts = False
@@ -601,11 +605,11 @@ Sub Reset()
     ObjCell_Result.HorizontalAlignment = xlLeft
     ObjCell_Result.ClearContents
     'ObjCell_Result.Font.ColorIndex = 48
-    ObjWS_Config.Cells(SET_CALCROW, SET_CALCCOL).Resize(MAXNUM_CALRESULT + SET_OFFSET).ClearContents
+    ObjWS_Config.Cells(SET_CALCROW, SET_CALCCOL).Resize(MAXNUM_CALRESULT + SET_OFFSET).Clear
     Application.DisplayAlerts = True
     Application.ScreenUpdating = True
 End Sub
-'=============================Ribbon 5 - 2'=============================%
+'=============================Ribbon 5 - 2'=============================
 Sub Calculate()
     Call InitGlobals
     Application.DisplayAlerts = False
@@ -724,7 +728,7 @@ Public Function CheckNumber(CheckCell As Range) As Double
         CheckNumber = 0
     End If
 End Function
-'=============================Global'==================================%
+'=============================Global'====================================
 Sub InitGlobals()
     Set WB0 = ActiveWorkbook
     Set ObjWS_Config = ActiveWorkbook.Worksheets(ObjWS_Config_Name)
@@ -732,7 +736,7 @@ Sub InitGlobals()
     Set ObjCell_Result = ObjCell_SearchPath.Offset(1).Resize(MAXNUM_FILEFIND)
     Set ObjCell_Name = ObjCell_Result.Offset(, SET_NCOL - SET_PATHCOL)
 End Sub
-'=============================Initiall'==================================%
+'=============================Initiall'==================================
 Sub SetPage()
 	ReDim GlobalMacroList(SET_BTTCNT - 1)
     GlobalMacroList = Array("ListFile", "SimpName", "ExtractSheet", "ChartGen", "RenderColor", "ColorIndex", "SaveExcel", "LoadPPT", "MailTo", "Reset", "Calculate")
