@@ -25,7 +25,7 @@ Public Const SET_CALCROW As Integer = SET_BTTCNT + 1: Public Const SET_CALCCOL A
 Public Const SET_YCOL As Integer = SET_INTCOL + 1: Public Const SET_XCOL As Integer = SET_INTCOL + 2
 Public Const SET_NCOL As Integer = SET_INTCOL + 3: Public Const SET_PATHCOL As Integer = SET_INTCOL + 4
 
-'=============================Group1 Ribbon 1'=============================%
+'=============================Ribbon 1 - 1'=============================%
 Sub ListFile()
     Call InitGlobals
     Dim iStarNum%, sSearchPath$, sSplitPath(MAXNUM_STARMARK) As String
@@ -85,7 +85,7 @@ Public Function FilePath(sPath() As String, sTmpPath$, iCurrent%, iStarNum%, Obj
         Next iDocIndex
     End If
 End Function
-'=============================Group1 Ribbon 2'=============================
+'=============================Ribbon 1 - 2'=============================
 Sub SimpName()
     Call InitGlobals
     Dim answer$, result$, original$, startfrom$, endbefore$
@@ -124,7 +124,7 @@ Sub SimpName()
     Next TmpCell
     Call ListFile
 End Sub
-'=============================Group1 Ribbon 3'=============================
+'=============================Ribbon 1 - 3'=============================
 Sub ExtractSheet()
     Call InitGlobals
     Application.DisplayAlerts = False
@@ -233,7 +233,7 @@ Public Function DataRange(ByVal Datasheet As Object, sPara$) As Range
     Set DataRange = Datasheet.Cells(1, 1)
     MsgBox ("Cannot find " & sPara & " for " & Datasheet.Name)
 End Function
-'=============================Group2 Ribbon 1'=============================%
+'=============================Ribbon 2 - 1'=============================%
 Sub ChartGen()
     Call InitGlobals
     Dim iSheetNum%, ChartName$, sParaX$, sParaY$, sParaY2$, sFilter$, myChart As Chart
@@ -395,7 +395,7 @@ Public Function IsInArray(FoundString As String, arr As Variant) As Boolean
     Next i
     IsInArray = False
 End Function
-'=============================Group2 Ribbon 2'=============================
+'=============================Ribbon 2 - 2'=============================
 Sub RenderColor()
     Call InitGlobals
     Dim srs As Series, chartset As ChartObject
@@ -416,7 +416,7 @@ Sub RenderColor()
             Next srs
     Next chartset
 End Sub
-'=============================Group2 Ribbon 3'=============================
+'=============================Ribbon 2 - 3'=============================
 Sub ColorIndex()
     Call InitGlobals
     Dim rCnt%, cCnt%
@@ -432,7 +432,7 @@ Sub ColorIndex()
         ObjCell_Result.Font.Name = "Calibri"
     End If
 End Sub
-'=============================Group3 Ribbon 1'=============================%
+'=============================Ribbon 3 - 1'=============================%
 Sub SaveExcel()
     Call InitGlobals
 	If WB0.Worksheets.Count < 2 Then End
@@ -462,7 +462,7 @@ Sub SaveExcel()
     Application.DisplayAlerts = True
     Application.ScreenUpdating = True
 End Sub
-'=============================Group3 Ribbon 2'=============================
+'=============================Ribbon 3 - 2'=============================
 Sub LoadPPT()
     Call InitGlobals
 	If WB0.Worksheets(ObjWS_Config_Name).ChartObjects.Count < 1 Then End
@@ -482,7 +482,7 @@ Sub LoadPPT()
       If iCnt = 9 Then iCnt = 0: iSld = iSld + 1
   Next chtObj
 End Sub
-'=============================Group3 Ribbon 3'=============================
+'=============================Ribbon 3 - 3'=============================
 Sub MailTo()
 	Call InitGlobals
 	If WB0.Worksheets(ObjWS_Config_Name).ChartObjects.Count < 1 Then End
@@ -581,7 +581,7 @@ Private Function RandomString(strlen As Integer) As String
 	Next i
 	RandomString = strTemp
 End Function
-'=============================Group5 Ribbon 1'=============================%
+'=============================Ribbon 5 - 1'=============================%
 Sub Reset()
     Call InitGlobals
     Application.DisplayAlerts = False
@@ -605,7 +605,7 @@ Sub Reset()
     Application.DisplayAlerts = True
     Application.ScreenUpdating = True
 End Sub
-'=============================Group5 Ribbon 2'=============================%
+'=============================Ribbon 5 - 2'=============================%
 Sub Calculate()
     Call InitGlobals
     Application.DisplayAlerts = False
@@ -724,7 +724,7 @@ Public Function CheckNumber(CheckCell As Range) As Double
         CheckNumber = 0
     End If
 End Function
-'=============================Global Initial'==============================%
+'=============================Global'==================================%
 Sub InitGlobals()
     Set WB0 = ActiveWorkbook
     Set ObjWS_Config = ActiveWorkbook.Worksheets(ObjWS_Config_Name)
@@ -732,7 +732,7 @@ Sub InitGlobals()
     Set ObjCell_Result = ObjCell_SearchPath.Offset(1).Resize(MAXNUM_FILEFIND)
     Set ObjCell_Name = ObjCell_Result.Offset(, SET_NCOL - SET_PATHCOL)
 End Sub
-'=============================Global Setting'==============================%
+'=============================Initiall'==================================%
 Sub SetPage()
 	ReDim GlobalMacroList(SET_BTTCNT - 1)
     GlobalMacroList = Array("ListFile", "SimpName", "ExtractSheet", "ChartGen", "RenderColor", "ColorIndex", "SaveExcel", "LoadPPT", "MailTo", "Reset", "Calculate")
